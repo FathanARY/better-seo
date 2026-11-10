@@ -21,6 +21,13 @@ PROMPTS = {
         "write schema markup for my product page": ["structured data", "schema"],
         "review my robots.txt for AI crawlers": ["robots.txt", "llms.txt", "ai crawler"],
     },
+    "better-seo-data": {
+        "which queries do I rank for": ["rank", "queries", "position"],
+        "how much traffic does my site get": ["traffic", "clicks", "impressions"],
+        "why does this page get impressions but no clicks": ["ctr", "clicks", "impressions"],
+        "connect search console": ["search console", "credentials"],
+        "is my site slow": ["core web vitals", "lcp", "lighthouse", "slow"],
+    },
     "better-seo-build": {
         "set up SEO for my new website": ["set up seo", "seo from scratch", "has no seo", "seo on a new site"],
         "my website has no SEO yet": ["has no seo", "no seo yet", "set up seo", "not configured"],

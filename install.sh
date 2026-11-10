@@ -12,6 +12,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AUDIT_SRC="$ROOT/skills/better-seo"
 BUILD_SRC="$ROOT/skills/better-seo-build"
+DATA_SRC="$ROOT/skills/better-seo-data"
 DEST_ROOT="${HOME}"
 DRY=0
 
@@ -27,6 +28,7 @@ done
 
 [ -f "$AUDIT_SRC/SKILL.md" ] || { echo "missing $AUDIT_SRC/SKILL.md" >&2; exit 1; }
 [ -f "$BUILD_SRC/SKILL.md" ] || { echo "missing $BUILD_SRC/SKILL.md" >&2; exit 1; }
+[ -f "$DATA_SRC/SKILL.md" ] || { echo "missing $DATA_SRC/SKILL.md" >&2; exit 1; }
 
 # omp reads ~/.agents/skills; Codex and Claude Code each keep their own tree.
 SKILL_ROOT_TARGETS=(
@@ -48,12 +50,17 @@ CMD_TARGETS=(
   "seo-build.md|$DEST_ROOT/.codex/commands/seo-build.md|$DEST_ROOT/.codex/skills/better-seo-build"
   "seo-build.md|$DEST_ROOT/.omp/agent/commands/seo-build.md|$DEST_ROOT/.agents/skills/better-seo-build"
   "seo-build.md|$DEST_ROOT/.agents/commands/seo-build.md|$DEST_ROOT/.agents/skills/better-seo-build"
+  "seo-data.md|$DEST_ROOT/.claude/commands/seo-data.md|$DEST_ROOT/.claude/skills/better-seo-data"
+  "seo-data.md|$DEST_ROOT/.codex/commands/seo-data.md|$DEST_ROOT/.codex/skills/better-seo-data"
+  "seo-data.md|$DEST_ROOT/.omp/agent/commands/seo-data.md|$DEST_ROOT/.agents/skills/better-seo-data"
+  "seo-data.md|$DEST_ROOT/.agents/commands/seo-data.md|$DEST_ROOT/.agents/skills/better-seo-data"
 )
 
 if [ "$DRY" -eq 1 ]; then
   for r in "${SKILL_ROOT_TARGETS[@]}"; do
     echo "would install -> $r/better-seo"
     echo "would install -> $r/better-seo-build"
+    echo "would install -> $r/better-seo-data"
   done
   for pair in "${CMD_TARGETS[@]}"; do echo "would install -> $(echo "$pair" | cut -d'|' -f2)"; done
   exit 0
@@ -67,7 +74,7 @@ prune() {
 
 for base in "${SKILL_ROOT_TARGETS[@]}"; do
   mkdir -p "$base"
-  for pair in "better-seo:$AUDIT_SRC" "better-seo-build:$BUILD_SRC"; do
+  for pair in "better-seo:$AUDIT_SRC" "better-seo-build:$BUILD_SRC" "better-seo-data:$DATA_SRC"; do
     name="${pair%%:*}"
     src="${pair#*:}"
     dst="$base/$name"
@@ -80,11 +87,13 @@ for base in "${SKILL_ROOT_TARGETS[@]}"; do
   # install time keeps one source of truth in the repo while leaving each
   # installed skill self-contained.
   ref_src="$base/better-seo/references"
-  ref_dst="$base/better-seo-build/references"
-  if [ -d "$ref_src" ]; then
-    rm -rf "$ref_dst"
-    cp -R "$ref_src" "$ref_dst"
-  fi
+  for consumer in better-seo-build better-seo-data; do
+    ref_dst="$base/$consumer/references"
+    if [ -d "$ref_src" ]; then
+      rm -rf "$ref_dst"
+      cp -R "$ref_src" "$ref_dst"
+    fi
+  done
 done
 
 for triple in "${CMD_TARGETS[@]}"; do
@@ -111,4 +120,4 @@ for triple in "${CMD_TARGETS[@]}"; do
   echo "installed -> $cmd"
 done
 
-echo "done. restart the agent to pick up the skills, /seo-audit and /seo-build."
+echo "done. restart the agent to pick up the skills and the /seo-audit, /seo-build, /seo-data commands."

@@ -1,7 +1,7 @@
 {
   "name": "better-seo",
   "version": "0.1.0",
-  "description": "Audit and set up a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
+  "description": "Audit, set up and measure a site's SEO: page and site-wide search visibility, agentic-search readiness, missing config, plus Search Console and Core Web Vitals data.",
   "author": {
     "name": "FathanARY"
   },
@@ -20,8 +20,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "better-seo",
-    "shortDescription": "SEO audit and SEO setup, with a stdlib CLI.",
-    "longDescription": "Two skills: better-seo audits a live page (crawl gates, on-page rules, structured data, AI-crawler policy) and better-seo-build scaffolds robots.txt, sitemap, llms.txt, canonical, meta tags and JSON-LD into a project in its own framework conventions.",
+    "shortDescription": "SEO audit, SEO setup, and real search data.",
+    "longDescription": "Three skills: better-seo audits a page or a whole site and checks AI-crawler policy, better-seo-build scaffolds robots, sitemap, llms.txt, meta tags and JSON-LD in the project's own framework, better-seo-data reads Search Console and Core Web Vitals when credentials exist and says so plainly when they do not.",
     "developerName": "FathanARY",
     "category": "Productivity",
     "brandColor": "#0B3D2E"

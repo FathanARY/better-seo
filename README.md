@@ -10,8 +10,10 @@ Two skills and two commands:
 |---|---|---|
 | `better-seo` | `/seo-audit <url>` | Measures a page or the whole site: 18 checks, score 0-100, ranked fixes |
 | `better-seo-build` | `/seo-build` | Configures SEO into a project that has none: robots, sitemap, llms.txt, canonical, meta, JSON-LD |
+| `better-seo-data` | `/seo-data` | Reads Search Console and Core Web Vitals when credentials exist; says so when they do not |
 
-Audit measures. Build scaffolds. Neither invents the site's facts.
+Audit measures what is in the page. Build scaffolds what is missing. Data reads
+what only Google knows. None of them invent a number.
 
 Ships two ways: as a **plugin** for agents with a plugin manager, and as a
 plain skill tree for everyone else. Either path gives you both skills, both
@@ -110,6 +112,42 @@ python skills/better-seo-build/scripts/seo_build.py --root .            # plan
 python skills/better-seo-build/scripts/seo_build.py --root . --write    # apply
 ```
 
+### `/seo-data`
+
+Data that is not in the HTML: Search Console clicks, impressions, CTR, average
+position and index coverage, plus Lighthouse Core Web Vitals.
+
+```bash
+python skills/better-seo-data/scripts/gsc.py sites
+python skills/better-seo-data/scripts/gsc.py report --property sc-domain:example.com --days 28
+python skills/better-seo-data/scripts/gsc.py opportunities --property sc-domain:example.com
+python skills/better-seo-data/scripts/cwv.py https://example.com
+```
+
+Credentials: `GSC_ACCESS_TOKEN`, or a JSON file at `~/.config/better-seo/gsc.json`
+with `client_id`, `client_secret`, `refresh_token` (refreshed over plain HTTPS,
+no crypto library needed).
+
+Exit codes are part of the contract:
+
+| Code | Meaning |
+|---|---|
+| `0` | data returned |
+| `2` | API or Lighthouse failure |
+| `3` | not configured; the message contains full setup steps |
+
+`3` is a normal, complete answer. Both scripts print instructions and stop, never
+a traceback and never an estimate.
+
+`opportunities` is the useful one: pages with real impressions but near-zero CTR.
+Google already shows them and nobody clicks, so the fix is the head tags, which
+`/seo-build` writes — not a ranking problem.
+
+Core Web Vitals come from Lighthouse, so they are **lab** data: one synthetic run
+in one browser. The output carries a `caveat` saying so; field INP needs CrUX.
+That is also why this lives in its own skill: it takes 30-60s and needs
+Chrome/Node, while `audit.py` answers in about a second with the stdlib alone.
+
 ### Site-wide crawl
 
 One page is not the site. `crawl.py` discovers URLs and audits many at once:
@@ -206,6 +244,12 @@ skills/better-seo/
 skills/better-seo-build/
   SKILL.md                     the build checklist and its guardrails
   scripts/seo_build.py         framework detection + scaffolding CLI
+  references/                  copied from better-seo at install time
+
+skills/better-seo-data/
+  SKILL.md                     what each number does and does not mean
+  scripts/gsc.py               Search Console client
+  scripts/cwv.py               Lighthouse wrapper
   references/                  copied from better-seo at install time
 ```
 

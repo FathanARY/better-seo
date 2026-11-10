@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SEO audit and SEO setup skills with stdlib CLIs and /seo-audit and /seo-build commands.",
+  "description": "SEO audit, SEO setup and search-data skills with stdlib CLIs.",
   "license": "MIT",
   "keywords": [
     "pi-package"
