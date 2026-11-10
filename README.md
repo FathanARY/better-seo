@@ -49,7 +49,8 @@ Checks cover indexability first (a `noindex` costs 12), then title, description,
 single H1, canonical, JSON-LD validity, lang, viewport, word count,
 answer-first opening paragraph, heading structure, question-shaped H2s, image
 alt, internal links, list/table markup, social meta, and — when online —
-`robots.txt` and `llms.txt` presence with AI-crawler user-agents named.
+`robots.txt` (parsed, not just fetched: any AI crawler disallowed on the audited
+URL is a `fail` worth 6 points) and `llms.txt` presence.
 
 Exit codes: `0` audited, `2` fetch failed. `--insecure` skips TLS verification
 only for machines behind a TLS-intercepting proxy; it is opt-in, never default.

@@ -20,6 +20,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import urllib.robotparser
 from html.parser import HTMLParser
 
 UA = "Mozilla/5.0 (compatible; better-seo-audit/1.0)"
@@ -144,6 +145,34 @@ def fetch_optional(url: str, insecure: bool = False) -> tuple[int, str]:
         return e.code, ""
     except (urllib.error.URLError, OSError, ValueError):
         return 0, ""
+
+AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "PerplexityBot", "ClaudeBot")
+
+
+def evaluate_robots(body: str, page_url: str) -> tuple[str, str]:
+    """Judge robots.txt by what it actually permits, not by the file existing.
+
+    An empty or missing body is allow-all. Any AI crawler disallowed on the
+    audited URL is a fail -- that is the single most common self-inflicted
+    agentic-visibility loss.
+    """
+    rp = urllib.robotparser.RobotFileParser()
+    rp.set_url(page_url)
+    try:
+        rp.parse(body.splitlines())
+    except (ValueError, UnicodeError):
+        return "warn", "robots.txt could not be parsed, treated as allow-all"
+
+    blocked = [ua for ua in AI_CRAWLERS if not rp.can_fetch(ua, page_url)]
+    if blocked:
+        return "fail", f"robots.txt blocks AI crawlers on this URL: {', '.join(blocked)}"
+
+    # Distinguish "rules that name AI agents and allow them" from "no rules at all".
+    named = [ua for ua in AI_CRAWLERS if ua.lower() in body.lower()]
+    if named:
+        return "pass", f"AI crawlers allowed: {', '.join(named)}"
+    return "pass", "no AI-crawler rules; default allow-all applies"
+
 
 
 def check(cid, weight, status, detail):
@@ -277,12 +306,11 @@ def audit(page: Page, html: str, url: str | None, insecure: bool = False) -> dic
     if url:
         base = f"{urllib.parse.urlparse(url).scheme}://{urllib.parse.urlparse(url).netloc}"
         code, body = fetch_optional(base + "/robots.txt", insecure)
-        if code == 200 and body.strip():
-            blocked = [ua for ua in ("GPTBot", "OAI-SearchBot", "PerplexityBot", "ClaudeBot")
-                       if ua in body]
-            add("robots_txt", 6, "pass", f"robots.txt found, mentions: {blocked or 'no AI agents'}")
+        if code == 200:
+            add("robots_txt", 6, *evaluate_robots(body, url))
         else:
-            add("robots_txt", 6, "warn", f"robots.txt status {code}")
+            add("robots_txt", 6, "warn",
+                f"robots.txt status {code}, treated as allow-all")
 
         code, body = fetch_optional(base + "/llms.txt", insecure)
         add("llms_txt", 3, "pass" if code == 200 and body.strip() else "warn",

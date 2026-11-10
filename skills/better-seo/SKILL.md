@@ -78,5 +78,3 @@ instead of asserting it.
 - `python <skill-dir>/scripts/audit.py --fixture <page>` exits 0 and the reported score
   moved in the intended direction after the edit.
 - Every rewrite you hand over is copy-paste ready and inside the stated limits.
-- `make check` passes if you changed any script or reference in this repo.
-- The skill folder is self-contained: `SKILL.md`, `scripts/audit.py`, `references/`. Nothing in it may reference files outside it.
