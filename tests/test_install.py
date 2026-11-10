@@ -15,13 +15,22 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TREES = [".claude/skills/better-seo", ".codex/skills/better-seo", ".agents/skills/better-seo"]
+TREES = [
+    ".claude/skills/better-seo",
+    ".codex/skills/better-seo",
+    ".agents/skills/better-seo",
+]
+BUILD_TREES = [t.replace("better-seo", "better-seo-build") for t in TREES]
 # command path -> the skill tree that same agent loads
 CMD_TREES = {
     ".claude/commands/seo-audit.md": ".claude/skills/better-seo",
     ".codex/commands/seo-audit.md": ".codex/skills/better-seo",
     ".omp/agent/commands/seo-audit.md": ".agents/skills/better-seo",
     ".agents/commands/seo-audit.md": ".agents/skills/better-seo",
+    ".claude/commands/seo-build.md": ".claude/skills/better-seo-build",
+    ".codex/commands/seo-build.md": ".codex/skills/better-seo-build",
+    ".omp/agent/commands/seo-build.md": ".agents/skills/better-seo-build",
+    ".agents/commands/seo-build.md": ".agents/skills/better-seo-build",
 }
 NEEDED = [
     "SKILL.md",
@@ -92,12 +101,31 @@ def main() -> int:
                 bad += 1
                 continue
             found = run_resolver(bash, snippet)
-            want_cli = str(Path(tmp) / skill_tree / "scripts" / "audit.py")
+            script = "seo_build.py" if "build" in skill_tree else "audit.py"
+            want_cli = str(Path(tmp) / skill_tree / "scripts" / script)
             if found and Path(found).resolve() == Path(want_cli).resolve():
                 print(f"PASS  {cmd} -> {skill_tree} (resolves)")
             else:
                 print(f"FAIL  {cmd} resolves {found or 'nothing'}, want {want_cli}")
                 bad += 1
+
+        for tree in BUILD_TREES:
+            for f in ("SKILL.md", "scripts/seo_build.py",
+                      "references/onpage.md", "references/agentic-search.md",
+                      "references/technical.md"):
+                p = Path(tmp) / tree / f
+                if p.is_file():
+                    print(f"PASS  {tree}/{f}")
+                else:
+                    print(f"FAIL  missing {tree}/{f}")
+                    bad += 1
+            junk = [p for p in (Path(tmp) / tree).rglob("*")
+                    if p.name == "__pycache__" or p.suffix == ".pyc"]
+            if junk:
+                print(f"FAIL  bytecode in {tree}: {[str(j) for j in junk]}")
+                bad += 1
+            else:
+                print(f"PASS  no bytecode in installed skill ({tree})")
 
         if bad:
             return 1

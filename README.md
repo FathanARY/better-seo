@@ -4,9 +4,18 @@ AI-agent skill for SEO and **agentic search** — making a site both crawlable b
 classic engines and quotable by LLM answer engines (ChatGPT, Perplexity, AI
 Overviews, Claude, Copilot).
 
+Two skills and two commands:
+
+| Skill | Command | Does |
+|---|---|---|
+| `better-seo` | `/seo-audit <url>` | Measures one live page: 18 checks, score 0-100, ranked fixes |
+| `better-seo-build` | `/seo-build` | Configures SEO into a project that has none: robots, sitemap, llms.txt, canonical, meta, JSON-LD |
+
+Audit measures. Build scaffolds. Neither invents the site's facts.
+
 Ships two ways: as a **plugin** for agents with a plugin manager, and as a
-plain skill tree for everyone else. Either path gives you the same skill, the
-stdlib-only CLI, and the `/seo-audit` command.
+plain skill tree for everyone else. Either path gives you both skills, both
+stdlib CLIs, and both commands.
 
 ## Install as a plugin
 
@@ -71,11 +80,37 @@ Restart the agent afterward. The skill triggers on SEO audit requests, "why
 doesn't my site rank", "why doesn't ChatGPT mention us", schema, robots.txt,
 `llms.txt`, and content-brief asks.
 
-## Slash command
+## Slash commands
 
 ```
-/seo-audit https://example.com
+/seo-audit https://example.com      # score a live page, get ranked fixes
+/seo-build                          # scaffold SEO into the current project
 ```
+
+### `/seo-build`
+
+Detects the project's framework from files that are actually there, then writes
+native config where the framework has one:
+
+| Framework | Artifacts |
+|---|---|
+| Next.js App Router | `app/robots.ts`, `app/sitemap.ts`, `lib/seo.ts` |
+| Astro | `src/pages/sitemap.xml.ts`, `Seo.astro`, `public/robots.txt` |
+| SvelteKit | `src/routes/sitemap.xml/+server.ts`, `static/robots.txt` |
+| Nuxt | `server/routes/sitemap.xml.ts`, `useSeo` composable |
+| Hugo / Jekyll | `layouts/partials/seo.html`, `_includes/seo.html` |
+| Static / unknown | `robots.txt`, `sitemap.xml`, `llms.txt`, `seo-head.html` |
+
+Dry-run by default; `--write` applies. It never overwrites an existing file, and
+`--inject page.html` merges the head block into an existing page, replacing a
+stale `<title>`, description or canonical rather than duplicating them.
+
+```bash
+python skills/better-seo-build/scripts/seo_build.py --root .            # plan
+python skills/better-seo-build/scripts/seo_build.py --root . --write    # apply
+```
+
+### `/seo-audit`
 
 Installed per agent. Each copy hardcodes the absolute path of the skill tree
 that same agent loads, so it runs the right CLI even with several installs on
@@ -132,7 +167,15 @@ skills/better-seo/
   references/agentic-search.md AI crawler gates, answer-first structure, llms.txt
   references/onpage.md         title/description/heading/schema rules with numbers
   references/technical.md      crawl, render, canonical, CWV thresholds
+
+skills/better-seo-build/
+  SKILL.md                     the build checklist and its guardrails
+  scripts/seo_build.py         framework detection + scaffolding CLI
+  references/                  copied from better-seo at install time
 ```
+
+`install.sh` copies `better-seo/references/` into `better-seo-build/` so the
+repo keeps one source of truth while each installed skill stays self-contained.
 
 ## Develop
 

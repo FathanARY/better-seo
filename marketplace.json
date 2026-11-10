@@ -1,6 +1,6 @@
 {
   "name": "better-seo",
-  "description": "SEO and agentic-search audit skill with a stdlib CLI and a /seo-audit command.",
+  "description": "SEO audit and SEO setup for AI agents: score a page, then build the missing config.",
   "owner": {
     "name": "FathanARY"
   },
@@ -9,9 +9,16 @@
       "name": "better-seo",
       "source": "./",
       "version": "0.1.0",
-      "description": "Audit and fix a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
+      "description": "Audit and set up a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
       "license": "MIT",
-      "keywords": ["seo", "aeo", "geo", "agentic-search", "llms-txt", "structured-data"]
+      "keywords": [
+        "seo",
+        "aeo",
+        "geo",
+        "agentic-search",
+        "llms-txt",
+        "structured-data"
+      ]
     }
   ]
 }

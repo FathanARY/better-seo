@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SEO and agentic-search audit skill with a stdlib CLI and a /seo-audit command.",
+  "description": "SEO audit and SEO setup skills with stdlib CLIs and /seo-audit and /seo-build commands.",
   "license": "MIT",
   "keywords": [
     "pi-package"
   ],
   "pi": {
-    "skills": ["./skills"]
+    "skills": [
+      "./skills"
+    ]
   }
 }

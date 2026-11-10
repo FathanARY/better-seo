@@ -2,7 +2,7 @@
   "name": "better-seo",
   "displayName": "better-seo",
   "version": "0.1.0",
-  "description": "Audit and fix a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
+  "description": "Audit and set up a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
   "author": {
     "name": "FathanARY"
   },
@@ -17,6 +17,10 @@
     "structured-data",
     "agent-skills"
   ],
-  "skills": ["./skills/"],
-  "commands": ["./commands/"]
+  "skills": [
+    "./skills/"
+  ],
+  "commands": [
+    "./commands/"
+  ]
 }

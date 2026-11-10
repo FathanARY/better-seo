@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "better-seo",
   "version": "0.1.0",
-  "description": "Audit and fix a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
+  "description": "Audit and set up a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
   "author": {
     "name": "FathanARY"
   },

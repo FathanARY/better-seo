@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Verify the better-seo skill triggers on real SEO prompts.
+"""Verify each skill's frontmatter description matches the prompts it must catch.
 
-Reads the skill's frontmatter description, then scores each fixture prompt
-against the keyword sets the description must cover. Exits 1 if any prompt
-misses, printing which keyword each prompt needed.
-
-This tests the description, not a model. It is a cheap regression gate: if
-someone trims the description down to "SEO skill", the prompts stop matching
-and this fails.
+This does not call a model. It is a cheap regression gate: if a description is
+trimmed to something generic, its prompts stop matching and this fails.
 """
 from __future__ import annotations
 
@@ -16,43 +11,56 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "skills" / "better-seo" / "SKILL.md"
 
-# prompt -> keyword groups; a prompt matches when ANY phrase from ANY group
-# appears (case-insensitive) in the description.
+# skill dir -> {prompt: keyword groups; ANY phrase from ANY group must appear}
 PROMPTS = {
-    "audit meta title": [["meta title", "title tag", "meta description", "audit"]],
-    "why is my page not showing up in ChatGPT": [["chatgpt", "ai search", "ai chatbots", "llm"]],
-    "how do I get cited by AI Overviews": [["ai search", "ai overview", "cited", "llm"]],
-    "write schema markup for my product page": [["structured data", "schema"]],
-    "review my robots.txt for AI crawlers": [["robots.txt", "llms.txt", "ai crawler"]],
+    "better-seo": {
+        "audit meta title": ["meta title", "title tag", "meta description", "audit"],
+        "why is my page not showing up in ChatGPT": ["chatgpt", "ai search", "ai chatbots", "llm"],
+        "how do I get cited by AI Overviews": ["ai search", "ai overview", "cited", "llm"],
+        "write schema markup for my product page": ["structured data", "schema"],
+        "review my robots.txt for AI crawlers": ["robots.txt", "llms.txt", "ai crawler"],
+    },
+    "better-seo-build": {
+        "set up SEO for my new website": ["set up seo", "seo from scratch", "has no seo", "seo on a new site"],
+        "my website has no SEO yet": ["has no seo", "no seo yet", "set up seo", "not configured"],
+        "add meta tags to my project": ["meta tags", "metadata", "head tags"],
+        "generate robots.txt and sitemap": ["robots.txt", "sitemap"],
+        "which framework conventions for SEO": ["next.js", "framework", "conventions"],
+    },
 }
 
 
-def description_of(text: str) -> str:
+def description_of(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
     m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
     if not m:
-        raise SystemExit(f"no frontmatter in {SKILL}")
-    fm = m.group(1)
-    d = re.search(r"^description:\s*(?:>-?\s*\n)?(.*?)(?:\n\w+:|\Z)", fm, re.S | re.M)
+        raise SystemExit(f"no frontmatter in {path}")
+    d = re.search(r"^description:\s*(?:>-?\s*\n)?(.*?)(?:\n\w+:|\Z)", m.group(1), re.S | re.M)
     if not d:
-        raise SystemExit("no description field in frontmatter")
+        raise SystemExit(f"no description field in {path}")
     return " ".join(d.group(1).split())
 
 
 def main() -> int:
-    desc = description_of(SKILL.read_text(encoding="utf-8"))
-    low = desc.lower()
-    ok = 0
-    for prompt, groups in PROMPTS.items():
-        hit = any(p in low for p in groups[0])
-        print(f"{'PASS' if hit else 'FAIL'}  {prompt}")
-        if hit:
-            ok += 1
-        else:
-            print(f"      missing any of: {groups[0]}")
-    print(f"\n{ok}/{len(PROMPTS)}")
-    return 0 if ok == len(PROMPTS) else 1
+    total = ok_total = 0
+    for skill, prompts in PROMPTS.items():
+        path = ROOT / "skills" / skill / "SKILL.md"
+        if not path.is_file():
+            print(f"FAIL  missing {path}")
+            return 1
+        desc = description_of(path).lower()
+        print(f"\n{skill}")
+        for prompt, groups in prompts.items():
+            total += 1
+            hit = any(p in desc for p in groups)
+            print(f"{'PASS' if hit else 'FAIL'}  {prompt}")
+            if hit:
+                ok_total += 1
+            else:
+                print(f"      description missing any of: {groups}")
+    print(f"\n{ok_total}/{total}")
+    return 0 if ok_total == total else 1
 
 
 if __name__ == "__main__":
