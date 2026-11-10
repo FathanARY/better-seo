@@ -2,7 +2,8 @@
 
 PY ?= python
 
-check: test
+check: clean
+	@$(MAKE) --no-print-directory test
 	@echo "all checks passed"
 
 test:
@@ -15,4 +16,6 @@ install:
 	@$(PY) -c "import subprocess,sys;sys.path.insert(0,'tests');from test_install import find_bash;b=find_bash() or 'bash';sys.exit(subprocess.call([b,'install.sh']))"
 
 clean:
-	@rm -rf __pycache__ tests/__pycache__ scripts/__pycache__ .pytest_cache
+	@find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
+	@find . -name '*.pyc' -delete 2>/dev/null || true
+	@rm -rf .pytest_cache

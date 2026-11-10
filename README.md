@@ -34,6 +34,25 @@ Restart the agent afterward. The skill triggers on SEO audit requests, "why
 doesn't my site rank", "why doesn't ChatGPT mention us", schema, robots.txt,
 `llms.txt`, and content-brief asks.
 
+## Slash command
+
+```
+/seo-audit https://example.com
+```
+
+Installs to every agent's commands directory:
+
+| Agent | Path |
+|---|---|
+| Claude Code | `~/.claude/commands/seo-audit.md` |
+| Codex | `~/.codex/commands/seo-audit.md` |
+| omp | `~/.omp/agent/commands/seo-audit.md` |
+| `.agents` standard | `~/.agents/commands/seo-audit.md` |
+
+The command resolves the installed `audit.py` itself, runs it, and returns a
+score, a severity-ranked fix list, copy-paste-ready markup, and the
+agentic-search gate verdict. It refuses to advise without running the audit.
+
 ## Audit CLI
 
 Stdlib only, no network needed for fixtures.
@@ -79,7 +98,8 @@ skills/better-seo/
 make check    # trigger match + audit behavior + install into a temp root
 ```
 
-Tests are fixture-based, offline, stdlib only.
+Tests are fixture-based, offline, stdlib only. `make check` runs `make clean`
+first, so local bytecode can never ride along into an installed skill.
 
 ## License
 

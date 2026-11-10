@@ -14,6 +14,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TREES = [".claude/skills/better-seo", ".codex/skills/better-seo", ".agents/skills/better-seo"]
+CMD_TREES = [
+    ".claude/commands/seo-audit.md",
+    ".codex/commands/seo-audit.md",
+    ".omp/agent/commands/seo-audit.md",
+    ".agents/commands/seo-audit.md",
+]
 NEEDED = [
     "SKILL.md",
     "scripts/audit.py",
@@ -46,6 +52,25 @@ def main() -> int:
                 else:
                     print(f"FAIL  missing {tree}/{f}")
                     bad += 1
+        # The installed skill must never ship local test bytecode.
+        for tree in TREES:
+            junk = [p for p in (Path(tmp) / tree).rglob("*")
+                    if p.name == "__pycache__" or p.suffix == ".pyc"]
+            label = "no bytecode in installed skill"
+            if junk:
+                print(f"FAIL  {label}: {[str(j) for j in junk]}")
+                bad += 1
+            else:
+                print(f"PASS  {label} ({tree})")
+
+        for cmd in CMD_TREES:
+            p = Path(tmp) / cmd
+            if p.is_file() and "seo-audit" in p.name:
+                print(f"PASS  {cmd}")
+            else:
+                print(f"FAIL  missing {cmd}")
+                bad += 1
+
         if bad:
             return 1
 
