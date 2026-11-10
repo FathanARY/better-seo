@@ -14,12 +14,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TREES = [".claude/skills/better-seo", ".codex/skills/better-seo", ".agents/skills/better-seo"]
-CMD_TREES = [
-    ".claude/commands/seo-audit.md",
-    ".codex/commands/seo-audit.md",
-    ".omp/agent/commands/seo-audit.md",
-    ".agents/commands/seo-audit.md",
-]
+# command path -> the skill tree that same agent loads
+CMD_TREES = {
+    ".claude/commands/seo-audit.md": ".claude/skills/better-seo",
+    ".codex/commands/seo-audit.md": ".codex/skills/better-seo",
+    ".omp/agent/commands/seo-audit.md": ".agents/skills/better-seo",
+    ".agents/commands/seo-audit.md": ".agents/skills/better-seo",
+}
 NEEDED = [
     "SKILL.md",
     "scripts/audit.py",
@@ -63,12 +64,23 @@ def main() -> int:
             else:
                 print(f"PASS  {label} ({tree})")
 
-        for cmd in CMD_TREES:
+        for cmd, skill_tree in CMD_TREES.items():
             p = Path(tmp) / cmd
-            if p.is_file() and "seo-audit" in p.name:
-                print(f"PASS  {cmd}")
-            else:
+            if not p.is_file():
                 print(f"FAIL  missing {cmd}")
+                bad += 1
+                continue
+            text = p.read_text(encoding="utf-8")
+            if "@SKILL_DIR@" in text:
+                print(f"FAIL  {cmd} still has an unsubstituted placeholder")
+                bad += 1
+                continue
+            # Every copy must point at the skill tree its own agent loads.
+            want = str(Path(tmp) / skill_tree).replace("\\", "/")
+            if want in text.replace("\\", "/"):
+                print(f"PASS  {cmd} -> {skill_tree}")
+            else:
+                print(f"FAIL  {cmd} does not reference {skill_tree}")
                 bad += 1
 
         if bad:

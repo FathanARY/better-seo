@@ -34,17 +34,21 @@ TARGETS=(
   "$DEST_ROOT/.agents/skills/better-seo"
 )
 
-# Each agent scans its own commands dir for slash commands.
+# Each agent scans its own commands dir for slash commands. The command body
+# embeds an absolute path to the audit CLI, so every copy is written against the
+# skill tree that same agent actually loads -- a shared static file would point
+# two of the three at the wrong tree.
+#   <command path> | <skill dir that agent loads>
 CMD_TARGETS=(
-  "$DEST_ROOT/.claude/commands/seo-audit.md"
-  "$DEST_ROOT/.codex/commands/seo-audit.md"
-  "$DEST_ROOT/.omp/agent/commands/seo-audit.md"
-  "$DEST_ROOT/.agents/commands/seo-audit.md"
+  "$DEST_ROOT/.claude/commands/seo-audit.md|$DEST_ROOT/.claude/skills/better-seo"
+  "$DEST_ROOT/.codex/commands/seo-audit.md|$DEST_ROOT/.codex/skills/better-seo"
+  "$DEST_ROOT/.omp/agent/commands/seo-audit.md|$DEST_ROOT/.agents/skills/better-seo"
+  "$DEST_ROOT/.agents/commands/seo-audit.md|$DEST_ROOT/.agents/skills/better-seo"
 )
 
 if [ "$DRY" -eq 1 ]; then
   for t in "${TARGETS[@]}"; do echo "would install -> $t"; done
-  for t in "${CMD_TARGETS[@]}"; do echo "would install -> $t"; done
+  for pair in "${CMD_TARGETS[@]}"; do echo "would install -> ${pair%%|*}"; done
   exit 0
 fi
 
@@ -58,10 +62,18 @@ for t in "${TARGETS[@]}"; do
   echo "installed -> $t"
 done
 
-for t in "${CMD_TARGETS[@]}"; do
-  mkdir -p "$(dirname "$t")"
-  cp "$CMD_SRC" "$t"
-  echo "installed -> $t"
+for pair in "${CMD_TARGETS[@]}"; do
+  cmd="${pair%%|*}"
+  skill_dir="${pair##*|}"
+  # Emit forward slashes: the path lands inside a shell snippet in markdown, and
+  # backslashes would be eaten by the shell that runs it.
+  skill_dir="${skill_dir//\\//}"
+  mkdir -p "$(dirname "$cmd")"
+  # Bash parameter expansion is a literal replacement; sed would treat the
+  # backslashes in a Windows path as escapes and mangle the path.
+  body="$(<"$CMD_SRC")"
+  printf '%s\n' "${body//@SKILL_DIR@/$skill_dir}" > "$cmd"
+  echo "installed -> $cmd"
 done
 
 echo "done. restart the agent to pick up the skill and /seo-audit."

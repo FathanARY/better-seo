@@ -5,23 +5,22 @@ argument-hint: "<url>"
 
 Run a real audit of $ARGUMENTS. Do not advise from memory.
 
-1. Locate the audit CLI. It ships inside the better-seo skill; try these in order
-   and use the first that exists:
-
-   - `~/.agents/skills/better-seo/scripts/audit.py`
-   - `~/.claude/skills/better-seo/scripts/audit.py`
-   - `~/.codex/skills/better-seo/scripts/audit.py`
-
-2. Run it:
+1. Run the audit CLI. It ships inside this skill:
 
    ```bash
-   python <that-path> "$ARGUMENTS" --json audit-result.json
+   python "@SKILL_DIR@/scripts/audit.py" "$ARGUMENTS" --json audit-result.json
    ```
+
+   If that path does not exist (wrong OS path style or a moved install), fall
+   back to the first of these that does:
+   `~/.agents/skills/better-seo/scripts/audit.py`,
+   `~/.claude/skills/better-seo/scripts/audit.py`,
+   `~/.codex/skills/better-seo/scripts/audit.py`.
 
    If the URL is missing, ask for it once and stop. If TLS fails with
    `CERTIFICATE_VERIFY_FAILED`, retry once with `--insecure` and say you did.
 
-3. Read `score`, every `fail`, and every `warn`. Then produce:
+2. Read `score`, every `fail`, and every `warn`. Then produce:
 
    - **Score** and the single biggest blocker, in one line.
    - **Ranked fix list**: descending `weight`, one entry per fail/warn with what
@@ -32,7 +31,7 @@ Run a real audit of $ARGUMENTS. Do not advise from memory.
      PerplexityBot and ClaudeBot fetch the audited URL, plus `llms.txt` status.
    - **Unverified**: anything you could not check. Say so instead of guessing.
 
-4. Load `references/agentic-search.md`, `references/onpage.md` or
+3. Load `references/agentic-search.md`, `references/onpage.md` or
    `references/technical.md` from the same skill folder for the rules behind
    each recommendation. Do not dump them; cite the relevant rule.
 

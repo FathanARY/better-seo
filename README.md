@@ -40,18 +40,23 @@ doesn't my site rank", "why doesn't ChatGPT mention us", schema, robots.txt,
 /seo-audit https://example.com
 ```
 
-Installs to every agent's commands directory:
+Installed per agent. Each copy hardcodes the absolute path of the skill tree
+that same agent loads, so it runs the right CLI even with several installs on
+the box:
 
-| Agent | Path |
+| Consumer | Path |
 |---|---|
 | Claude Code | `~/.claude/commands/seo-audit.md` |
-| Codex | `~/.codex/commands/seo-audit.md` |
-| omp | `~/.omp/agent/commands/seo-audit.md` |
-| `.agents` standard | `~/.agents/commands/seo-audit.md` |
+| omp (native provider) | `~/.omp/agent/commands/seo-audit.md` |
+| omp (agents provider) | `~/.agents/commands/seo-audit.md` |
+| Codex via omp's `codex` provider | `~/.codex/commands/seo-audit.md` |
 
-The command resolves the installed `audit.py` itself, runs it, and returns a
-score, a severity-ranked fix list, copy-paste-ready markup, and the
-agentic-search gate verdict. It refuses to advise without running the audit.
+Native Codex has no slash-command surface for this: OpenAI deprecated custom
+prompts in favour of skills, so Codex is covered by the skill itself.
+
+The command runs `audit.py` and returns a score, a severity-ranked fix list,
+copy-paste-ready markup, and the agentic-search gate verdict. It refuses to
+advise without running the audit.
 
 ## Audit CLI
 
