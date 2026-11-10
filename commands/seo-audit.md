@@ -5,35 +5,55 @@ argument-hint: "<url>"
 
 Run a real audit of $ARGUMENTS. Do not advise from memory.
 
-1. Run the audit CLI. It ships inside this skill:
+## Step 1: resolve the audit CLI
 
-   ```bash
-   python "@SKILL_DIR@/scripts/audit.py" "$ARGUMENTS" --json audit-result.json
-   ```
+It ships inside the skill, which sits beside this command. The path is written
+absolute by `install.sh`, or resolved at runtime when this arrives as a plugin.
+Run this and use the path it prints:
 
-   If that path does not exist (wrong OS path style or a moved install), fall
-   back to the first of these that does:
-   `~/.agents/skills/better-seo/scripts/audit.py`,
-   `~/.claude/skills/better-seo/scripts/audit.py`,
-   `~/.codex/skills/better-seo/scripts/audit.py`.
+```bash
+CLI=""
+for c in "@SKILL_DIR@/scripts/audit.py" \
+         "${PLUGIN_ROOT:-}/skills/better-seo/scripts/audit.py" \
+         "${CLAUDE_PLUGIN_ROOT:-}/skills/better-seo/scripts/audit.py" \
+         "$HOME/.agents/skills/better-seo/scripts/audit.py" \
+         "$HOME/.claude/skills/better-seo/scripts/audit.py" \
+         "$HOME/.codex/skills/better-seo/scripts/audit.py"; do
+  [ -f "$c" ] && CLI="$c" && break
+done
+echo "CLI=$CLI"
+```
 
-   If the URL is missing, ask for it once and stop. If TLS fails with
-   `CERTIFICATE_VERIFY_FAILED`, retry once with `--insecure` and say you did.
+If it prints `CLI=` empty, say the skill is not installed and stop. Do not
+substitute a guess.
 
-2. Read `score`, every `fail`, and every `warn`. Then produce:
+## Step 2: run it
 
-   - **Score** and the single biggest blocker, in one line.
-   - **Ranked fix list**: descending `weight`, one entry per fail/warn with what
-     to change and why it costs visibility.
-   - **Copy-paste fixes**: exact title tag, meta description, H1, JSON-LD block.
-     Inside the limits: title 50-60 chars, description 120-155.
-   - **Agentic-search gate**: whether `robots.txt` lets GPTBot, OAI-SearchBot,
-     PerplexityBot and ClaudeBot fetch the audited URL, plus `llms.txt` status.
-   - **Unverified**: anything you could not check. Say so instead of guessing.
+```bash
+python "$CLI" "<url>" --json audit-result.json
+```
 
-3. Load `references/agentic-search.md`, `references/onpage.md` or
-   `references/technical.md` from the same skill folder for the rules behind
-   each recommendation. Do not dump them; cite the relevant rule.
+If the URL is missing, ask for it once and stop. If TLS fails with
+`CERTIFICATE_VERIFY_FAILED`, retry once with `--insecure` and say you did.
+
+## Step 3: report
+
+Read `score`, every `fail`, and every `warn`. Then produce:
+
+- **Score** and the single biggest blocker, in one line.
+- **Ranked fix list**: descending `weight`, one entry per fail/warn with what to
+  change and why it costs visibility.
+- **Copy-paste fixes**: exact title tag, meta description, H1, JSON-LD block.
+  Inside the limits: title 50-60 chars, description 120-155.
+- **Agentic-search gate**: whether `robots.txt` lets GPTBot, OAI-SearchBot,
+  PerplexityBot and ClaudeBot fetch the audited URL, plus `llms.txt` status.
+- **Unverified**: anything you could not check. Say so instead of guessing.
+
+## Step 4: cite the rules
+
+Load `references/agentic-search.md`, `references/onpage.md` or
+`references/technical.md` from the same skill folder for the rule behind each
+recommendation. Do not dump them; cite the relevant rule.
 
 Never invent traffic, rankings, or competitor data. Never promise a ranking or a
 citation. Never recommend cloaking, hidden text, or link schemes.

@@ -82,18 +82,21 @@ def main() -> int:
                 print(f"FAIL  {cmd} does not reference {skill_tree}")
                 bad += 1
                 continue
-            # ...and that path must actually resolve. A matching string is not
+            # ...and the resolver must actually find it. A matching string is not
             # enough: an MSYS '/c/Users/...' path matched here but made Windows
             # Python look for C:\c\Users\...
-            m = re.search(r'python "([^"]*audit\.py)"', text)
-            if not m:
-                print(f"FAIL  {cmd} has no runnable python snippet")
+            snippet = extract_snippet(text)
+            if not snippet:
+                print(f"FAIL  {cmd} has no runnable resolver snippet")
                 bad += 1
-            elif not Path(m.group(1)).is_file():
-                print(f"FAIL  {cmd} points at a path that does not exist: {m.group(1)}")
-                bad += 1
-            else:
+                continue
+            found = run_resolver(bash, snippet)
+            want_cli = str(Path(tmp) / skill_tree / "scripts" / "audit.py")
+            if found and Path(found).resolve() == Path(want_cli).resolve():
                 print(f"PASS  {cmd} -> {skill_tree} (resolves)")
+            else:
+                print(f"FAIL  {cmd} resolves {found or 'nothing'}, want {want_cli}")
+                bad += 1
 
         if bad:
             return 1
@@ -117,6 +120,22 @@ def main() -> int:
     return 1 if bad else 0
 
 
+def extract_snippet(text: str) -> str:
+    """Pull the resolver shell block out of a command file."""
+    m = re.search(r"```bash\n(.*?)```", text, re.S)
+    return m.group(1) if m else ""
+
+
+def run_resolver(bash: str, snippet: str) -> str:
+    """Execute the command's own resolver and return the CLI path it prints."""
+    r = subprocess.run([bash, "-c", snippet], capture_output=True, text=True, timeout=60)
+    # The snippet prints "CLI=<path>"; take the last non-empty line.
+    lines = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    return lines[-1].removeprefix("CLI=")
+
+
 def install_with_posix_root(bash: str) -> int:
     """dest-root in MSYS form, as Git Bash's $HOME yields."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -136,11 +155,14 @@ def install_with_posix_root(bash: str) -> int:
         if not cmd.is_file():
             print(f"FAIL  missing {cmd}")
             return 1
-        m = re.search(r'python "([^"]*audit\.py)"', cmd.read_text(encoding="utf-8"))
-        if not m:
-            print("FAIL  POSIX-root command has no python snippet")
+        snippet = extract_snippet(cmd.read_text(encoding="utf-8"))
+        if not snippet:
+            print("FAIL  POSIX-root command has no resolver snippet")
             return 1
-        target = m.group(1)
+        target = run_resolver(bash, snippet)
+        if not target:
+            print("FAIL  POSIX-root command resolved nothing")
+            return 1
         # The written path must resolve under the OS the agent runs on, not just
         # inside the shell that installed it.
         if Path(target).is_file():

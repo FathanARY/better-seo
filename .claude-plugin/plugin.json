@@ -1,0 +1,22 @@
+{
+  "name": "better-seo",
+  "displayName": "better-seo",
+  "version": "0.1.0",
+  "description": "Audit and fix a site's classic SEO and agentic-search visibility, so pages get cited by ChatGPT, Perplexity, AI Overviews and Claude.",
+  "author": {
+    "name": "FathanARY"
+  },
+  "repository": "https://github.com/FathanARY/better-seo",
+  "license": "MIT",
+  "keywords": [
+    "seo",
+    "aeo",
+    "geo",
+    "agentic-search",
+    "llms-txt",
+    "structured-data",
+    "agent-skills"
+  ],
+  "skills": ["./skills/"],
+  "commands": ["./commands/"]
+}
