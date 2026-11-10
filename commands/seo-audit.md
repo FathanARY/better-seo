@@ -7,25 +7,67 @@ Run a real audit of $ARGUMENTS. Do not advise from memory.
 
 ## Step 1: resolve the audit CLI
 
-It ships inside the skill, which sits beside this command. The path is written
-absolute by `install.sh`, or resolved at runtime when this arrives as a plugin.
-Run this and use the path it prints:
+It ships inside the skill, next to this command. `install.sh` writes an absolute
+path into `@SKILL_DIR@`; a plugin manager leaves that placeholder, so the script
+probes the roots plugin managers actually use, then the current directory. Run
+this and use the path it prints:
 
 ```bash
 CLI=""
-for c in "@SKILL_DIR@/scripts/audit.py" \
-         "${PLUGIN_ROOT:-}/skills/better-seo/scripts/audit.py" \
-         "${CLAUDE_PLUGIN_ROOT:-}/skills/better-seo/scripts/audit.py" \
-         "$HOME/.agents/skills/better-seo/scripts/audit.py" \
-         "$HOME/.claude/skills/better-seo/scripts/audit.py" \
-         "$HOME/.codex/skills/better-seo/scripts/audit.py"; do
-  [ -f "$c" ] && CLI="$c" && break
+# Some agent shells do not export HOME. Without this every probe becomes
+# "/.omp/..." and silently finds nothing.
+H="${HOME:-}"
+[ -n "$H" ] || H="${USERPROFILE:-}"
+[ -n "$H" ] || H="$(cd ~ 2>/dev/null && pwd)"
+# 1. Absolute path written by install.sh (a plugin manager leaves it unsubstituted).
+for c in "@SKILL_DIR@/scripts/audit.py"; do
+  case "$c" in *@*) ;; *) [ -f "$c" ] && CLI="$c" ;; esac
+  [ -n "$CLI" ] && break
 done
+# 2. Plugin roots. Two shapes: <root>/skills/better-seo/... and <root>/... .
+if [ -z "$CLI" ]; then
+  for root in "${PLUGIN_ROOT:-}" "${CLAUDE_PLUGIN_ROOT:-}" \
+              "$H/.omp/plugins/node_modules/better-seo" \
+              "$H/.agents/skills/better-seo" \
+              "$H/.claude/skills/better-seo" \
+              "$H/.codex/skills/better-seo"; do
+    [ -n "$root" ] || continue
+    for c in "$root/skills/better-seo/scripts/audit.py" "$root/scripts/audit.py"; do
+      [ -f "$c" ] && CLI="$c" && break
+    done
+    [ -n "$CLI" ] && break
+  done
+fi
+# 3. Current directory: a dev checkout, or the plugin tree itself.
+if [ -z "$CLI" ]; then
+  for c in "skills/better-seo/scripts/audit.py" "./skills/better-seo/scripts/audit.py"; do
+    [ -f "$c" ] && CLI="$PWD/$c" && break
+  done
+fi
+# 4. Versioned plugin cache, when the node_modules link is absent.
+if [ -z "$CLI" ]; then
+  for c in "$H"/.omp/plugins/cache/plugins/better-seo___*/skills/better-seo/scripts/audit.py; do
+    [ -f "$c" ] && CLI="$c" && break
+  done
+fi
+# 5. Last resort: search the known plugin and skill trees.
+if [ -z "$CLI" ]; then
+  for base in "$H/.omp/plugins" "$H/.agents" "$H/.claude" "$H/.codex"; do
+    [ -d "$base" ] || continue
+    c=$(find "$base" -name audit.py -path '*better-seo*' 2>/dev/null | head -1)
+    [ -n "$c" ] && CLI="$c" && break
+  done
+fi
+# Emit a path both Git Bash and native Windows Python accept. An MSYS form like
+# /c/Users/x makes Windows Python look for C:\c\Users\x.
+case "$CLI" in
+  /*) command -v cygpath >/dev/null 2>&1 && CLI="$(cygpath -m "$CLI")" ;;
+esac
 echo "CLI=$CLI"
 ```
 
 If it prints `CLI=` empty, say the skill is not installed and stop. Do not
-substitute a guess.
+substitute a guess, and do not audit with a different tool.
 
 ## Step 2: run it
 

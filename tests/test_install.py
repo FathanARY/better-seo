@@ -8,6 +8,7 @@ from __future__ import annotations
 
 
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -117,7 +118,47 @@ def main() -> int:
     # normalisation above, which is exactly how a '/c/Users/...' path shipped
     # unnoticed. Install again with the POSIX form Git Bash's $HOME produces.
     bad += install_with_posix_root(bash)
+    bad += resolver_survives_missing_home(bash)
     return 1 if bad else 0
+
+
+def resolver_survives_missing_home(bash: str) -> int:
+    """The command must still find the CLI when the agent shell lacks HOME.
+
+    Reproduced live: an omp session ran the command with HOME unset, so every
+    ~/ probe became /.omp/... and the resolver printed an empty CLI.
+    """
+    src = (ROOT / "commands" / "seo-audit.md").read_text(encoding="utf-8")
+    snippet = extract_snippet(src)
+    if not snippet:
+        print("FAIL  command has no resolver snippet")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # A plugin-shaped tree, installed under a fake home with no HOME var.
+        home = Path(tmp) / "home"
+        skill = home / ".omp/plugins/node_modules/better-seo/skills/better-seo"
+        shutil.copytree(ROOT / "skills/better-seo", skill)
+        script = Path(tmp) / "resolver.sh"
+        script.write_text(snippet, encoding="utf-8", newline="\n")
+
+        fails = 0
+        for label, prelude in [
+            ("HOME set", f"export HOME='{home}'"),
+            ("HOME unset", f"unset HOME; export USERPROFILE='{home}'"),
+        ]:
+            # Neutral cwd: from the repo root the command's "current directory"
+            # fallback would find the checkout and mask a broken home probe.
+            r = subprocess.run([bash, "-c", f"{prelude}; bash '{script}'"],
+                               capture_output=True, text=True, timeout=60, cwd=tmp)
+            line = [ln for ln in r.stdout.splitlines() if ln.startswith("CLI=")]
+            got = line[-1][4:].strip() if line else ""
+            if got and Path(got).is_file():
+                print(f"PASS  resolver finds the CLI with {label}")
+            else:
+                print(f"FAIL  resolver with {label} printed {got or 'nothing'}")
+                fails += 1
+        return fails
 
 
 def extract_snippet(text: str) -> str:

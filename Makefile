@@ -7,6 +7,7 @@ check: clean
 	@echo "all checks passed"
 
 test:
+	@$(PY) tests/test_manifests.py
 	@$(PY) scripts/trigger_check.py
 	@$(PY) tests/test_audit.py
 	@$(PY) tests/test_install.py

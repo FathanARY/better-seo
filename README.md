@@ -4,9 +4,43 @@ AI-agent skill for SEO and **agentic search** — making a site both crawlable b
 classic engines and quotable by LLM answer engines (ChatGPT, Perplexity, AI
 Overviews, Claude, Copilot).
 
-Two parts: a skill the agent loads, and a stdlib-only CLI it runs before giving advice.
+Ships two ways: as a **plugin** for agents with a plugin manager, and as a
+plain skill tree for everyone else. Either path gives you the same skill, the
+stdlib-only CLI, and the `/seo-audit` command.
 
-## Install
+## Install as a plugin
+
+The repo is its own marketplace, with a manifest per platform. No `install.sh`,
+no copying into `$HOME`.
+
+**omp**
+
+```bash
+omp plugin marketplace add FathanARY/better-seo
+omp plugin install better-seo@better-seo
+```
+
+Or link a local checkout while developing:
+
+```bash
+omp plugin link .          # needs package.json, which the repo has
+```
+
+**Claude Code** — manifests in `.claude-plugin/`:
+
+```bash
+claude plugin marketplace add FathanARY/better-seo
+claude plugin install better-seo@better-seo
+```
+
+**Codex** — `.codex-plugin/plugin.json`.
+
+Manifests present: `plugin.json` (portable Agent Plugins 1.0.0), `.claude-plugin/`,
+`.codex-plugin/`, `.omp-plugin/`, `.agents/plugins/`, plus `package.json` for
+`omp plugin link`. `make check` validates they agree on name, version, content
+paths, and that the portable manifest satisfies its closed schema.
+
+## Install as a skill tree
 
 ```bash
 git clone https://github.com/FathanARY/better-seo.git && cd better-seo
@@ -21,6 +55,9 @@ bash, not the WSL stub that often sits on `PATH`:
 ```bash
 "C:/Program Files/Git/bin/bash.exe" install.sh --dry-run
 ```
+
+Writes into `$HOME` for every agent. Use this when there is no plugin manager,
+or when you want a sandbox (`--dest-root`) or a preview (`--dry-run`).
 
 Targets:
 
