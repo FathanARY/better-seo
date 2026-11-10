@@ -9,10 +9,17 @@ Two parts: a skill the agent loads, and a stdlib-only CLI it runs before giving 
 ## Install
 
 ```bash
-git clone <this-repo> && cd better-seo
-./install.sh                 # writes into $HOME for all three agents
+git clone https://github.com/FathanARY/better-seo.git && cd better-seo
+./install.sh                      # writes into $HOME for all three agents
 ./install.sh --dest-root /tmp/x   # sandbox
 ./install.sh --dry-run            # show targets only
+```
+
+On Windows, `./install.sh` cannot run (Windows has no shebang exec). Use a real
+bash, not the WSL stub that often sits on `PATH`:
+
+```bash
+"C:/Program Files/Git/bin/bash.exe" install.sh --dry-run
 ```
 
 Targets:
