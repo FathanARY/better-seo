@@ -14,7 +14,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TREES = [".claude/skills/better-seo", ".codex/skills/better-seo", ".agents/skills/better-seo"]
-NEEDED = ["SKILL.md", "references/agentic-search.md", "references/onpage.md", "references/technical.md"]
+NEEDED = [
+    "SKILL.md",
+    "scripts/audit.py",
+    "references/agentic-search.md",
+    "references/onpage.md",
+    "references/technical.md",
+]
 
 
 def main() -> int:
@@ -40,6 +46,20 @@ def main() -> int:
                 else:
                     print(f"FAIL  missing {tree}/{f}")
                     bad += 1
+        if bad:
+            return 1
+
+        # The installed skill must be runnable from an unrelated cwd: its CLI
+        # lives inside the skill folder, not at the repo root.
+        installed = Path(tmp) / TREES[0] / "scripts" / "audit.py"
+        fixture = ROOT / "tests" / "fixtures" / "good.html"
+        r = subprocess.run([sys.executable, str(installed), "--fixture", str(fixture), "--quiet"],
+                           capture_output=True, text=True, cwd=tmp)
+        if r.returncode == 0:
+            print("PASS  installed audit.py runs from a foreign cwd")
+        else:
+            print(f"FAIL  installed audit.py failed: {r.stderr.strip()}")
+            bad += 1
         return 1 if bad else 0
 
 

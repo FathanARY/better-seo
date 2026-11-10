@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """SEO + agentic-search audit. Stdlib only.
 
+Lives inside the skill folder; run it by path.
+
 Usage:
-    python scripts/audit.py https://example.com
-    python scripts/audit.py https://example.com --json out.json
-    python scripts/audit.py --fixture page.html
+    python <skill-dir>/scripts/audit.py https://example.com
+    python <skill-dir>/scripts/audit.py https://example.com --json out.json
+    python <skill-dir>/scripts/audit.py --fixture page.html
+    python <skill-dir>/scripts/audit.py URL --insecure   # TLS-intercepting proxy only
+
+Exit 0 on a completed audit, 2 when the fetch fails.
 """
 from __future__ import annotations
 

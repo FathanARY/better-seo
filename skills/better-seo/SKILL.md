@@ -27,15 +27,23 @@ Never optimize item 3 while item 1 is broken. Report the real blocker first.
 
 Do not guess a site's state. Fetch it.
 
+The CLI ships inside this skill folder. Run it from the skill directory (the
+path where this `SKILL.md` lives), not from the user's project root:
+
 ```bash
-python scripts/audit.py https://example.com
-python scripts/audit.py https://example.com --json out.json
-python scripts/audit.py --fixture page.html        # offline, no network
+python <skill-dir>/scripts/audit.py https://example.com
+python <skill-dir>/scripts/audit.py https://example.com --json out.json
+python <skill-dir>/scripts/audit.py --fixture page.html    # offline, no network
+python <skill-dir>/scripts/audit.py https://example.com --insecure  # TLS-intercepting proxy only
 ```
 
-Output: JSON with `score` (0-100), `checks` (each with id, status, weight), and
-`sources` diffs. Read `score` and every `fail` check before writing advice.
-Fix checks in descending weight order; a 40-weight fail matters more than five 5-weight fails.
+Copy `--json out.json` output somewhere the user can keep; do not write into the
+skill directory.
+
+Output: JSON with `url`, `score` (0-100), `checks` (each with `id`, `weight`,
+`status`, `detail`), and `issues` (fail and warn lines, heaviest first). Read
+`score` and every `fail` check before writing advice.
+Fix checks in descending weight order; a 12-weight fail matters more than five 4-weight fails.
 
 If the script cannot run, fall back to manual parsing and say so explicitly.
 Never present unaudited advice as audited.
@@ -67,7 +75,8 @@ instead of asserting it.
 
 ## Verification before handoff
 
-- `python scripts/audit.py --fixture <page>` exits 0 and the reported score
+- `python <skill-dir>/scripts/audit.py --fixture <page>` exits 0 and the reported score
   moved in the intended direction after the edit.
 - Every rewrite you hand over is copy-paste ready and inside the stated limits.
 - `make check` passes if you changed any script or reference in this repo.
+- The skill folder is self-contained: `SKILL.md`, `scripts/audit.py`, `references/`. Nothing in it may reference files outside it.

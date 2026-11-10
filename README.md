@@ -32,10 +32,15 @@ doesn't my site rank", "why doesn't ChatGPT mention us", schema, robots.txt,
 Stdlib only, no network needed for fixtures.
 
 ```bash
-python scripts/audit.py https://example.com
-python scripts/audit.py https://example.com --json report.json
-python scripts/audit.py --fixture page.html      # offline
+python skills/better-seo/scripts/audit.py https://example.com
+python skills/better-seo/scripts/audit.py https://example.com --json report.json
+python skills/better-seo/scripts/audit.py --fixture page.html      # offline
+python skills/better-seo/scripts/audit.py https://example.com --insecure
 ```
+
+After `install.sh`, the same file lives at
+`~/.agents/skills/better-seo/scripts/audit.py` (and the `.claude` / `.codex`
+copies). It is self-contained: stdlib only, no imports from this repo.
 
 Output: JSON with `score` (0-100), `checks` (id, weight, status, detail), and a
 severity-sorted `issues` list.
@@ -46,13 +51,15 @@ answer-first opening paragraph, heading structure, question-shaped H2s, image
 alt, internal links, list/table markup, social meta, and — when online —
 `robots.txt` and `llms.txt` presence with AI-crawler user-agents named.
 
-Exit codes: `0` audited, `2` fetch failed.
+Exit codes: `0` audited, `2` fetch failed. `--insecure` skips TLS verification
+only for machines behind a TLS-intercepting proxy; it is opt-in, never default.
 
 ## Skill contents
 
 ```
 skills/better-seo/
   SKILL.md                     order of operations, guardrails, verification
+  scripts/audit.py             the audit CLI, ships with the skill
   references/agentic-search.md AI crawler gates, answer-first structure, llms.txt
   references/onpage.md         title/description/heading/schema rules with numbers
   references/technical.md      crawl, render, canonical, CWV thresholds

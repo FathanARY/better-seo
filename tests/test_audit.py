@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-AUDIT = ROOT / "scripts" / "audit.py"
+AUDIT = ROOT / "skills" / "better-seo" / "scripts" / "audit.py"
 GOOD = ROOT / "tests" / "fixtures" / "good.html"
 BAD = ROOT / "tests" / "fixtures" / "bad.html"
 
