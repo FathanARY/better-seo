@@ -43,6 +43,29 @@ skill directory.
 Output: JSON with `url`, `score` (0-100), `checks` (each with `id`, `weight`,
 `status`, `detail`), and `issues` (fail and warn lines, heaviest first). Read
 `score` and every `fail` check before writing advice.
+
+### Many pages at once
+
+One page is not the site. When the user asks about the site as a whole, or wants
+to know which problem is systemic, use the crawler in the same folder:
+
+```bash
+python <skill-dir>/scripts/crawl.py https://example.com
+python <skill-dir>/scripts/crawl.py https://example.com --source sitemap --limit 50
+python <skill-dir>/scripts/crawl.py https://example.com --source links --depth 2
+python <skill-dir>/scripts/crawl.py --fixture-dir dist/        # offline
+```
+
+It discovers URLs from `robots.txt` `Sitemap:` directives, then `/sitemap.xml`,
+then same-origin links, and audits up to `--limit` pages. Defaults are timid on
+purpose: one request at a time, 0.3s apart, 25 pages, hard cap 200. It honours
+`robots.txt` before fetching anything, refuses off-origin URLs, and never writes
+outside the `--json` path you give it.
+
+Report `common_failures` first. A check failing on 31 of 50 pages is a template
+bug and is worth more than any single page score. `worst` is the handful to look
+at individually. Give `score_median`, not just the mean, because one broken page
+must not hide a healthy site.
 Fix checks in descending weight order; a 12-weight fail matters more than five 4-weight fails.
 
 If the script cannot run, fall back to manual parsing and say so explicitly.

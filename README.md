@@ -8,7 +8,7 @@ Two skills and two commands:
 
 | Skill | Command | Does |
 |---|---|---|
-| `better-seo` | `/seo-audit <url>` | Measures one live page: 18 checks, score 0-100, ranked fixes |
+| `better-seo` | `/seo-audit <url>` | Measures a page or the whole site: 18 checks, score 0-100, ranked fixes |
 | `better-seo-build` | `/seo-build` | Configures SEO into a project that has none: robots, sitemap, llms.txt, canonical, meta, JSON-LD |
 
 Audit measures. Build scaffolds. Neither invents the site's facts.
@@ -110,6 +110,40 @@ python skills/better-seo-build/scripts/seo_build.py --root .            # plan
 python skills/better-seo-build/scripts/seo_build.py --root . --write    # apply
 ```
 
+### Site-wide crawl
+
+One page is not the site. `crawl.py` discovers URLs and audits many at once:
+
+```bash
+python skills/better-seo/scripts/crawl.py https://example.com
+python skills/better-seo/scripts/crawl.py https://example.com --source sitemap --limit 50
+python skills/better-seo/scripts/crawl.py https://example.com --source links --depth 2
+python skills/better-seo/scripts/crawl.py --fixture-dir dist/            # offline
+```
+
+Discovery order: `Sitemap:` lines in `robots.txt`, then `/sitemap.xml` (recursing
+one level of sitemap-index), then same-origin links.
+
+Deliberately timid defaults: one request at a time, `--delay 0.3`, `--limit 25`,
+hard cap 200. `robots.txt` is checked before every fetch, off-origin URLs are
+refused, and the limit is enforced as an error rather than a silent truncation.
+
+Output is one JSON document:
+
+| Field | Meaning |
+|---|---|
+| `score_mean` / `score_median` | report both; one broken page must not hide a healthy site |
+| `score_min` / `score_max` | |
+| `worst` | five lowest-scoring pages, to look at individually |
+| `common_failures` | checks failing on the most pages, ranked by count then weight |
+| `skipped` | URLs refused, and why (off-origin, robots, fetch failed) |
+| `discovery` | which sitemaps were read and how many URLs each yielded |
+| `pages` | full per-page result, same shape as a single audit |
+
+`common_failures` is the part worth acting on first. A check failing on 31 of 50
+pages is a template bug, and fixing it once is worth more than fixing any single
+page.
+
 ### `/seo-audit`
 
 Installed per agent. Each copy hardcodes the absolute path of the skill tree
@@ -164,6 +198,7 @@ only for machines behind a TLS-intercepting proxy; it is opt-in, never default.
 skills/better-seo/
   SKILL.md                     order of operations, guardrails, verification
   scripts/audit.py             the audit CLI, ships with the skill
+  scripts/crawl.py             site-wide crawl + aggregate
   references/agentic-search.md AI crawler gates, answer-first structure, llms.txt
   references/onpage.md         title/description/heading/schema rules with numbers
   references/technical.md      crawl, render, canonical, CWV thresholds

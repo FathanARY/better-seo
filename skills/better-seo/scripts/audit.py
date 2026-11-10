@@ -127,8 +127,16 @@ def parse_html(html: str) -> Page:
     return p
 
 
+# Some CDNs answer 406 when Accept is missing or too narrow.
+HEADERS = {
+    "User-Agent": UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en;q=0.9,*;q=0.5",
+}
+
+
 def fetch(url: str, timeout: float = 15.0, insecure: bool = False) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    req = urllib.request.Request(url, headers=HEADERS)
     ctx = ssl._create_unverified_context() if insecure else None
     with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
         charset = r.headers.get_content_charset() or "utf-8"
@@ -137,7 +145,7 @@ def fetch(url: str, timeout: float = 15.0, insecure: bool = False) -> str:
 
 def fetch_optional(url: str, insecure: bool = False) -> tuple[int, str]:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        req = urllib.request.Request(url, headers=HEADERS)
         ctx = ssl._create_unverified_context() if insecure else None
         with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
             return r.status, r.read(200_000).decode("utf-8", "replace")

@@ -10,6 +10,7 @@ test:
 	@$(PY) tests/test_manifests.py
 	@$(PY) scripts/trigger_check.py
 	@$(PY) tests/test_audit.py
+	@$(PY) tests/test_crawl.py
 	@$(PY) tests/test_seo_build.py
 	@$(PY) tests/test_install.py
 

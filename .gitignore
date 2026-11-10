@@ -4,3 +4,5 @@ __pycache__/
 node_modules/
 *.tgz
 audit-result.json
+crawl-result.json
+site-audit.json

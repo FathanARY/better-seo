@@ -35,6 +35,7 @@ CMD_TREES = {
 NEEDED = [
     "SKILL.md",
     "scripts/audit.py",
+    "scripts/crawl.py",
     "references/agentic-search.md",
     "references/onpage.md",
     "references/technical.md",
