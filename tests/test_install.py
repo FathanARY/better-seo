@@ -7,6 +7,7 @@ asserts the reference files came along, then cleans up.
 from __future__ import annotations
 
 
+import re
 import subprocess
 import sys
 import tempfile
@@ -77,11 +78,22 @@ def main() -> int:
                 continue
             # Every copy must point at the skill tree its own agent loads.
             want = str(Path(tmp) / skill_tree).replace("\\", "/")
-            if want in text.replace("\\", "/"):
-                print(f"PASS  {cmd} -> {skill_tree}")
-            else:
+            if want not in text.replace("\\", "/"):
                 print(f"FAIL  {cmd} does not reference {skill_tree}")
                 bad += 1
+                continue
+            # ...and that path must actually resolve. A matching string is not
+            # enough: an MSYS '/c/Users/...' path matched here but made Windows
+            # Python look for C:\c\Users\...
+            m = re.search(r'python "([^"]*audit\.py)"', text)
+            if not m:
+                print(f"FAIL  {cmd} has no runnable python snippet")
+                bad += 1
+            elif not Path(m.group(1)).is_file():
+                print(f"FAIL  {cmd} points at a path that does not exist: {m.group(1)}")
+                bad += 1
+            else:
+                print(f"PASS  {cmd} -> {skill_tree} (resolves)")
 
         if bad:
             return 1
@@ -97,7 +109,45 @@ def main() -> int:
         else:
             print(f"FAIL  installed audit.py failed: {r.stderr.strip()}")
             bad += 1
-        return 1 if bad else 0
+
+    # A sandbox root given as a Windows path never exercises the MSYS
+    # normalisation above, which is exactly how a '/c/Users/...' path shipped
+    # unnoticed. Install again with the POSIX form Git Bash's $HOME produces.
+    bad += install_with_posix_root(bash)
+    return 1 if bad else 0
+
+
+def install_with_posix_root(bash: str) -> int:
+    """dest-root in MSYS form, as Git Bash's $HOME yields."""
+    with tempfile.TemporaryDirectory() as tmp:
+        posix = subprocess.run([bash, "-c", 'cygpath -u "$1"', "-", tmp],
+                               capture_output=True, text=True).stdout.strip()
+        if not posix.startswith("/"):
+            print("SKIP: no MSYS path form available (not Git Bash)")
+            return 0
+
+        r = subprocess.run([bash, str(ROOT / "install.sh"), "--dest-root", posix],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            print(f"FAIL  install with POSIX root exited {r.returncode}: {r.stderr.strip()}")
+            return 1
+
+        cmd = Path(tmp) / ".agents/commands/seo-audit.md"
+        if not cmd.is_file():
+            print(f"FAIL  missing {cmd}")
+            return 1
+        m = re.search(r'python "([^"]*audit\.py)"', cmd.read_text(encoding="utf-8"))
+        if not m:
+            print("FAIL  POSIX-root command has no python snippet")
+            return 1
+        target = m.group(1)
+        # The written path must resolve under the OS the agent runs on, not just
+        # inside the shell that installed it.
+        if Path(target).is_file():
+            print("PASS  POSIX dest-root yields a path the OS can resolve")
+            return 0
+        print(f"FAIL  POSIX dest-root wrote an unusable path: {target}")
+        return 1
 
 
 def find_bash() -> str | None:

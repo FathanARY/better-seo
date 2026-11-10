@@ -65,9 +65,18 @@ done
 for pair in "${CMD_TARGETS[@]}"; do
   cmd="${pair%%|*}"
   skill_dir="${pair##*|}"
-  # Emit forward slashes: the path lands inside a shell snippet in markdown, and
-  # backslashes would be eaten by the shell that runs it.
+  # The path lands inside a shell snippet with forward slashes: backslashes would
+  # be eaten by the shell that runs it.
   skill_dir="${skill_dir//\\//}"
+  # Git Bash hands out MSYS paths like /c/Users/x and /tmp/x. Native Windows
+  # Python reads those as C:\c\Users\x, so convert any absolute POSIX path to
+  # mixed form C:/Users/x, which both the shell and Windows Python accept.
+  # No cygpath means a POSIX host: leave the path alone.
+  case "$skill_dir" in
+    /*) if command -v cygpath >/dev/null 2>&1; then
+          skill_dir="$(cygpath -m "$skill_dir")"
+        fi ;;
+  esac
   mkdir -p "$(dirname "$cmd")"
   # Bash parameter expansion is a literal replacement; sed would treat the
   # backslashes in a Windows path as escapes and mangle the path.
