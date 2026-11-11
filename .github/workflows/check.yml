@@ -1,0 +1,49 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install a real bash for install.sh (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "bash available at $(command -v bash)"
+      - name: Check
+        shell: bash
+        run: |
+          python tests/test_manifests.py
+          python scripts/trigger_check.py
+          python tests/test_audit.py
+          python tests/test_crawl.py
+          python tests/test_seo_build.py
+          python tests/test_seo_data.py
+          python tests/test_install.py
+
+  cli:
+    name: CLI on a live page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit a real URL, no dependencies
+        run: |
+          python skills/better-seo/scripts/audit.py https://example.com --json /tmp/out.json
+          python tests/check_live_cli.py /tmp/out.json

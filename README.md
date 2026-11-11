@@ -4,7 +4,23 @@ AI-agent skill for SEO and **agentic search** — making a site both crawlable b
 classic engines and quotable by LLM answer engines (ChatGPT, Perplexity, AI
 Overviews, Claude, Copilot).
 
-Two skills and two commands:
+```
+npx skills add FathanARY/better-seo
+```
+
+One command. No API keys, no `pip install`, no network account. The audit is a
+stdlib-only Python CLI that fetches the page and reports what it actually
+measured, then hands back copy-paste fixes inside the documented length limits.
+
+**What it checks that prompt-only SEO skills cannot:** `robots.txt` is evaluated
+with real [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309) matching (`Allow`,
+`*` wildcards, `$` anchors, longest-match precedence), and the page is fetched a
+second time as `GPTBot`, `OAI-SearchBot`, `PerplexityBot` and `ClaudeBot` — so a
+CDN bot-fight rule that silently 403s AI crawlers is caught instead of guessed.
+The same content is also re-read with scripts and `<noscript>` excluded, which is
+what a non-JS AI crawler sees.
+
+Three skills and three commands:
 
 | Skill | Command | Does |
 |---|---|---|
