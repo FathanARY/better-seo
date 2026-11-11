@@ -102,12 +102,27 @@ def main() -> int:
         ("path-scoped disallow keeps audited URL", "User-agent: OAI-SearchBot\nDisallow: /private\n", "pass"),
         ("rules for unrelated bots do not count", "User-agent: BadBot\nDisallow: /\n", "pass"),
         ("blanket disallow blocks AI crawlers too", "User-agent: *\nDisallow: /\n", "fail"),
+        # Regression: urllib.robotparser reads * and $ literally and ignores
+        # Allow, which inverts the verdict on real-world robots.txt files.
+        ("wildcard /* blocks everything", "User-agent: *\nDisallow: /*\n", "fail"),
+        ("$ anchor matches an extension", "User-agent: *\nDisallow: /*.pdf$\n", "pass"),
+        ("query wildcard ignores a queryless URL", "User-agent: *\nDisallow: /*?\n", "pass"),
+        ("longer Allow beats blanket Disallow",
+         "User-agent: *\nDisallow: /\nAllow: /a\n", "pass"),
+        ("HTML served at robots.txt is unusable",
+         "<!doctype html><html><body>404</body></html>", "warn"),
     ]
     for name, body, want in robots_cases:
         got, detail = evaluate_robots(body, "https://x.test/a")
         checks.append((f"{name} -> {want}", got == want))
         if got != want:
             print(f"      got {got}: {detail}")
+
+    # A wildcard that targets query strings only bites URLs that have one.
+    got, detail = evaluate_robots("User-agent: *\nDisallow: /*?\n", "https://x.test/a?b=1")
+    checks.append(("query wildcard blocks a URL with a query", got == "fail"))
+    if got != "fail":
+        print(f"      got {got}: {detail}")
 
     for name, ok in checks:
         print(f"{'PASS' if ok else 'FAIL'}  {name}")
