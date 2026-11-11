@@ -197,8 +197,33 @@ def main() -> int:
         if not ok:
             fails += 1
 
+    fails += test_redaction()
+
     return 1 if fails else 0
 
+
+def test_redaction():
+    """Credential values must never reach stdout, stderr, or a bug report."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "gsc_under_test", ROOT / "skills" / "better-seo-data" / "scripts" / "gsc.py")
+    gsc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gsc)
+    cases = [
+        ('{"client_secret":"abc123","refresh_token":"1//xyz"}', "abc123"),
+        ('{"client_secret":"abc123","refresh_token":"1//xyz"}', "1//xyz"),
+        ("grant_type=refresh_token&client_secret=s3cr3t", "s3cr3t"),
+        ("Authorization failed for ya29.a0AfH6SMBxxxxxxxxxxxxxx", "ya29.a0AfH6SMB"),
+    ]
+    checks = []
+    for text, secret in cases:
+        out = gsc.redact(text)
+        checks.append((f"redacts {secret[:12]}", secret not in out))
+    checks.append(("keeps the key name readable", "client_secret" in gsc.redact('client_secret=x')))
+    checks.append(("plain text passes through", gsc.redact("no secrets here") == "no secrets here"))
+    for name, ok in checks:
+        print(f"{'PASS' if ok else 'FAIL'}  {name}")
+    return sum(1 for _, ok in checks if not ok)
 
 if __name__ == "__main__":
     sys.exit(main())

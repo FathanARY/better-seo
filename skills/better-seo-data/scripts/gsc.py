@@ -22,6 +22,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -37,6 +38,21 @@ SCOPES = "https://www.googleapis.com/auth/webmasters.readonly"
 # Google finalises data with a lag; asking for today returns partial rows.
 DEFAULT_LAG_DAYS = 3
 
+
+SECRET_KEYS = ("access_token", "refresh_token", "client_secret", "id_token")
+
+def redact(text: str) -> str:
+    """Strip credential values from anything we are about to print.
+
+    An OAuth token endpoint can echo the form it received inside an error body,
+    and a TLS-intercepting proxy can echo more. Printing that body verbatim
+    would put a refresh token in the user's terminal, shell history, or a pasted
+    bug report.
+    """
+    for key in SECRET_KEYS:
+        text = re.sub(rf'("{key}"\s*:\s*")[^"]*(")', r'\1[redacted]\2', text)
+        text = re.sub(rf'({key}=)[^&\s"]+', r'\1[redacted]', text)
+    return re.sub(r"(ya29\.[A-Za-z0-9._-]{10,})", "[redacted]", text)
 
 class NotConfigured(Exception):
     """No usable credentials. Exit 3, with instructions."""
@@ -101,7 +117,7 @@ def post_form(url: str, fields: dict, insecure: bool, timeout: float = 30.0) -> 
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
             return json.loads(r.read().decode("utf-8", "replace"))
     except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "replace")[:500]
+        detail = redact(e.read().decode("utf-8", "replace")[:500])
         raise ApiError(f"token endpoint {e.code}: {detail}")
     except (urllib.error.URLError, OSError, ValueError) as e:
         raise ApiError(f"token endpoint unreachable: {e}")
@@ -110,6 +126,12 @@ def post_form(url: str, fields: dict, insecure: bool, timeout: float = 30.0) -> 
 def access_token(creds: dict, insecure: bool) -> str:
     if creds["kind"] == "token":
         return creds["access_token"]
+    default_url = "https://oauth2.googleapis.com/token"
+    if TOKEN_URL.rstrip("/") != default_url:
+        # GSC_TOKEN_URL exists for testing a mock. Sending a real refresh token
+        # to a host that is not Google is how a credential walks out the door.
+        print(f"warning: posting OAuth credentials to non-Google endpoint {TOKEN_URL}",
+              file=sys.stderr)
     data = post_form(TOKEN_URL, {
         "grant_type": "refresh_token",
         "client_id": creds["client_id"],
@@ -139,7 +161,7 @@ def call(path: str, token: str, insecure: bool, payload: dict | None = None,
             raw = r.read().decode("utf-8", "replace")
             return json.loads(raw) if raw.strip() else {}
     except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "replace")[:500]
+        detail = redact(e.read().decode("utf-8", "replace")[:500])
         if e.code in (401, 403):
             raise NotConfigured(
                 f"The token was rejected ({e.code}). It expired, lacks the "

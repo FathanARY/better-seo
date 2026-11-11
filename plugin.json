@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "better-seo",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Audit, set up and measure a site's SEO: page and site-wide search visibility, agentic-search readiness, missing config, plus Search Console and Core Web Vitals data.",
   "author": {
     "name": "FathanARY"

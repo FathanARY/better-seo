@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semver](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-11-11
+
+### Fixed
+
+- `better-seo-data` printed OAuth error bodies verbatim. A token endpoint can
+  echo the form it received, and a TLS-intercepting proxy can echo more, so a
+  `refresh_token` or `client_secret` could land in the terminal, shell history,
+  or a pasted bug report. Error bodies are now redacted before they are printed.
+- `better-seo-data` now warns on stderr when `GSC_TOKEN_URL` points somewhere
+  other than Google before it posts credentials there.
+
 ## [0.2.0] - 2026-11-11
 
 ### Fixed
