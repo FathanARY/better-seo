@@ -189,6 +189,12 @@ def main() -> int:
     checks.append(("cwv says it will not install anything", "never installs" in detail))
     checks.append(("cwv prints no traceback", "Traceback" not in err))
 
+    # npx downloads a package, so it must not be the silent fallback.
+    src = (ROOT / "skills" / "better-seo-data" / "scripts" / "cwv.py").read_text(encoding="utf-8")
+    checks.append(("npx fallback is guarded by --allow-npx",
+                   "if allow_npx and shutil.which" in src))
+    checks.append(("--allow-npx is a documented flag", '"--allow-npx"' in src))
+
     code, _, err = run(CWV, "ftp://example.com", env_extra={"PATH": ""})
     checks.append(("cwv rejects a non-http url with exit 2", code == 2))
 

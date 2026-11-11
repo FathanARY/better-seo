@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is
 [semver](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-11-11
+
+### Changed
+
+- `cwv.py` no longer falls back to `npx --yes lighthouse@12` on its own. That
+  command downloads a package and runs it, which contradicted the skill's own
+  guardrail ("never install Lighthouse... on the user's machine"). Pass
+  `--allow-npx` to opt in for a single run; the default is exit `3` with
+  instructions.
+
 ## [0.2.1] - 2026-11-11
 
 ### Fixed

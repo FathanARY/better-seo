@@ -1,6 +1,6 @@
 {
   "name": "better-seo",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "SEO audit, SEO setup and search-data skills with stdlib CLIs.",

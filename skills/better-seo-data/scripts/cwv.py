@@ -45,7 +45,10 @@ Lighthouse is not available. Either path works:
        npm install -g lighthouse
      then make sure a Chrome or Chromium binary is on PATH (or set CHROME_PATH).
 
-This script never installs anything for you. Report the gap instead."""
+This script never installs anything for you. Report the gap instead.
+
+Or re-run with --allow-npx to let it fetch lighthouse@12 through npx for this
+run only. That downloads a package, which is why it is opt-in."""
 
 
 class Missing(Exception):
@@ -56,13 +59,18 @@ class Failed(Exception):
     """Lighthouse ran but did not produce usable output. Exit 2."""
 
 
-def find_lighthouse() -> list[str]:
+def find_lighthouse(allow_npx: bool = False) -> list[str]:
+    """A globally installed lighthouse, or npx only when explicitly allowed.
+
+    `npx --yes lighthouse@12` downloads a package and runs it. That is an
+    install, so it cannot be the silent fallback for a skill whose own
+    guardrail says it never installs anything on the user's machine.
+    """
     exe = shutil.which("lighthouse")
     if exe:
         return [exe]
-    npx = shutil.which("npx")
-    if npx:
-        return [npx, "--yes", "lighthouse@12"]
+    if allow_npx and shutil.which("npx"):
+        return ["npx", "--yes", "lighthouse@12"]
     raise Missing(MISSING_HELP)
 
 
@@ -142,8 +150,9 @@ def parse_report(report: dict) -> dict:
     }
 
 
-def run_lighthouse(url: str, mobile: bool, extra: list[str]) -> dict:
-    cmd = find_lighthouse()
+def run_lighthouse(url: str, mobile: bool, extra: list[str],
+                   allow_npx: bool = False) -> dict:
+    cmd = find_lighthouse(allow_npx)
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "lh.json"
         argv = cmd + [
@@ -178,6 +187,8 @@ def main(argv=None) -> int:
     ap.add_argument("--mobile", action="store_true",
                     help="mobile emulation (Lighthouse's default; desktop is the opt-out)")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--allow-npx", action="store_true",
+                    help="let npx download lighthouse@12 for this run (installs a package)")
     ap.add_argument("--lighthouse-arg", action="append", default=[],
                     help="extra argument passed through to Lighthouse")
     args = ap.parse_args(argv)
@@ -187,7 +198,8 @@ def main(argv=None) -> int:
         return 2
 
     try:
-        report = run_lighthouse(args.url, args.mobile, args.lighthouse_arg)
+        report = run_lighthouse(args.url, args.mobile, args.lighthouse_arg,
+                                allow_npx=args.allow_npx)
     except Missing as e:
         print(json.dumps({"error": "missing_toolchain", "detail": str(e)},
                          ensure_ascii=False), file=sys.stderr)

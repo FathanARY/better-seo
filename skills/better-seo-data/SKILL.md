@@ -81,9 +81,10 @@ python <skill-dir>/scripts/cwv.py https://example.com
 python <skill-dir>/scripts/cwv.py https://example.com --mobile --json cwv.json
 ```
 
-Takes 30-60 seconds and needs Chrome plus Node (it uses `lighthouse`, or `npx
-lighthouse@12` when there is no global install). Exit `3` means the toolchain is
-missing; the message says how to install it. It never installs anything itself.
+Takes 30-60 seconds and needs Chrome plus a `lighthouse` binary on PATH. Exit `3`
+means the toolchain is missing; the message says how to install it. It never
+installs anything itself: the `npx lighthouse@12` fallback only runs when you
+pass `--allow-npx`, because that downloads a package.
 
 Thresholds come from `references/technical.md` and are applied by the script:
 
