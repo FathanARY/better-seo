@@ -26,7 +26,6 @@ import sys
 import time
 import urllib.error
 import urllib.parse
-import urllib.robotparser
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -40,11 +39,13 @@ MAX_SITEMAP_DEPTH = 2
 SITEMAP_CANDIDATES = ("/sitemap.xml", "/sitemap_index.xml", "/sitemap-index.xml")
 NS = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
 
-
 def same_origin(url: str, origin: tuple[str, str]) -> bool:
     p = urllib.parse.urlparse(url)
     return (p.scheme, p.netloc.lower()) == origin
 
+def origin_of(url: str) -> tuple[str, str]:
+    p = urllib.parse.urlparse(url)
+    return (p.scheme, p.netloc.lower())
 
 def normalise(base: str, href: str) -> str | None:
     """Absolute, fragment-free http(s) URL, or None when it is not crawlable."""
@@ -57,7 +58,6 @@ def normalise(base: str, href: str) -> str | None:
         return None
     return urllib.parse.urlunparse(p._replace(fragment=""))
 
-
 def dedupe(urls: list[str]) -> list[str]:
     """Drop duplicates and the same path reachable with and without a slash."""
     seen: set[str] = set()
@@ -69,7 +69,6 @@ def dedupe(urls: list[str]) -> list[str]:
         seen.add(key)
         out.append(u)
     return out
-
 
 # --- discovery -------------------------------------------------------------
 
@@ -99,7 +98,6 @@ def parse_sitemap(body: str) -> tuple[list[str], list[str]]:
         return locs("url"), []
     return locs("url"), locs("sitemap")
 
-
 def sitemaps_from_robots(body: str, base: str) -> list[str]:
     """Honour `Sitemap:` lines. Sites that advertise it rarely use sitemap.xml."""
     out = []
@@ -111,10 +109,9 @@ def sitemaps_from_robots(body: str, base: str) -> list[str]:
                 out.append(u)
     return out
 
-
 def from_sitemap(start: str, insecure: bool, timeout: float,
                  log: list[dict], robots_body: str = "") -> list[str]:
-    origin = (urllib.parse.urlparse(start).scheme, urllib.parse.urlparse(start).netloc.lower())
+    origin = origin_of(start)
     base = f"{origin[0]}://{origin[1]}"
     # Declared locations first, then the conventional guesses.
     queue: list[str] = dedupe(sitemaps_from_robots(robots_body, base))
@@ -142,12 +139,17 @@ def from_sitemap(start: str, insecure: bool, timeout: float,
 
     return [u for u in dedupe(found) if same_origin(u, origin)]
 
-
 def from_links(start: str, depth: int, insecure: bool, timeout: float,
-               limit: int, delay: float, log: list[dict]) -> list[str]:
-    """Breadth-first over same-origin <a href>, deepest level = --depth."""
-    origin = (urllib.parse.urlparse(start).scheme, urllib.parse.urlparse(start).netloc.lower())
-    seen: set[str] = set()
+               limit: int, delay: float, log: list[dict],
+               rules=None, seen_pages: set[str] | None = None,
+               page_html: dict[str, tuple] | None = None) -> list[str]:
+    """Breadth-first over same-origin <a href>, deepest level = --depth.
+
+    `seen_pages` carries already-fetched URLs across levels so nothing is
+    requested twice, and robots rules are applied before a fetch, not after.
+    """
+    origin = origin_of(start)
+    seen = set(seen_pages or ())
     ordered: list[str] = []
     frontier = [start]
     for level in range(depth + 1):
@@ -157,15 +159,22 @@ def from_links(start: str, depth: int, insecure: bool, timeout: float,
             if key in seen:
                 continue
             seen.add(key)
+            if rules is not None and not rules.can_fetch(audit_mod.UA, url):
+                log.append({"url": url, "skipped": "robots.txt disallows"})
+                continue
             ordered.append(url)
             if len(ordered) >= limit or level == depth:
                 continue
             try:
-                html = audit_mod.fetch(url, insecure=insecure)
+                html, hdrs = audit_mod.fetch_page(url, timeout=timeout, insecure=insecure)
             except (urllib.error.URLError, OSError, ValueError) as e:
                 log.append({"url": url, "error": str(e)})
                 continue
             time.sleep(delay)
+            if page_html is not None:
+                # Keep body and headers: re-fetching them in the audit pass
+                # doubles the load on a site that did not ask to be crawled.
+                page_html[url] = (html, hdrs)
             page = audit_mod.parse_html(html)
             for href in page.links:
                 cand = normalise(url, href)
@@ -174,17 +183,17 @@ def from_links(start: str, depth: int, insecure: bool, timeout: float,
         frontier = dedupe(nxt)
         if not frontier or len(ordered) >= limit:
             break
+    if seen_pages is not None:
+        seen_pages.update(ordered)
     return ordered[:limit]
 
+def respectful(robots_body: str | None, ua: str = "*"):
+    """Backwards-compatible wrapper: returns the RFC 9309 matcher.
 
-def respectful(robots_body: str | None, ua: str = "*") -> urllib.robotparser.RobotFileParser:
-    rp = urllib.robotparser.RobotFileParser()
-    try:
-        rp.parse((robots_body or "").splitlines())
-    except (ValueError, UnicodeError):
-        pass
-    return rp
-
+    Kept because callers and tests import it; it no longer uses
+    urllib.robotparser, which ignores Allow and treats * and $ literally.
+    """
+    return audit_mod.RobotsRules(robots_body or "")
 
 # --- aggregation -----------------------------------------------------------
 
@@ -229,7 +238,6 @@ def aggregate(origin: str, source: str, pages: list[dict], refused: list[dict],
         "discovery": log,
     }
 
-
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Audit many pages of one site and aggregate the results.")
@@ -245,6 +253,8 @@ def main(argv=None) -> int:
                     help=f"seconds between requests (default {DEFAULT_DELAY})")
     ap.add_argument("--json", help="write JSON to this path instead of stdout only")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--no-crawler-probe", action="store_true",
+                    help="skip the per-page AI user-agent probes")
     ap.add_argument("--insecure", action="store_true")
     args = ap.parse_args(argv)
 
@@ -286,29 +296,31 @@ def main(argv=None) -> int:
     if p.scheme not in ("http", "https") or not p.netloc:
         print(json.dumps({"error": f"not an http(s) URL: {start}"}), file=sys.stderr)
         return 2
-    origin = (p.scheme, p.netloc.lower())
+    origin = origin_of(start)
     base = f"{p.scheme}://{p.netloc}"
 
     # Be a good citizen: read the site's own rules before walking it.
     code, robots_body = audit_mod.fetch_optional(base + "/robots.txt", args.insecure)
-    rp = respectful(robots_body if code == 200 else "", audit_mod.UA)
+    rules = audit_mod.RobotsRules(robots_body if code == 200 else "")
 
     log: list[dict] = []
     refused: list[dict] = []
+    fetched: set[str] = set()
+    page_html: dict[str, tuple] = {}
 
     source = args.source
     found: list[str] = []
     if source in ("auto", "sitemap"):
-        found = from_sitemap(start, args.insecure, 15.0, log,
+        found = from_sitemap(start, args.insecure, 20.0, log,
                              robots_body if code == 200 else "")
         if not found and source == "auto":
             source = "links"
         elif found:
             source = "sitemap"
-    if source == "links" or (args.source == "links"):
+    if source == "links" or args.source == "links":
         source = "links"
-        found = from_links(start, args.depth, args.insecure, 15.0, args.limit,
-                           args.delay, log)
+        found = from_links(start, args.depth, args.insecure, 20.0, args.limit,
+                           args.delay, log, rules, fetched, page_html)
 
     if not found:
         print(json.dumps({"error": "no URLs discovered",
@@ -320,7 +332,7 @@ def main(argv=None) -> int:
         if not same_origin(u, origin):
             refused.append({"url": u, "reason": "off-origin"})
             continue
-        if not rp.can_fetch(audit_mod.UA, u):
+        if not rules.can_fetch(audit_mod.UA, u):
             refused.append({"url": u, "reason": "robots.txt disallows"})
             continue
         targets.append(u)
@@ -332,16 +344,25 @@ def main(argv=None) -> int:
                           "site": base, "skipped": refused}), file=sys.stderr)
         return 2
 
+    # One site-level crawler probe, shared by every page so scores stay comparable.
+    probe = None
+    if not args.no_crawler_probe:
+        probe = audit_mod.crawler_probe(start, args.insecure)
+
     pages = []
     for i, u in enumerate(targets):
         if i:
             time.sleep(args.delay)
-        try:
-            html = audit_mod.fetch(u, insecure=args.insecure)
-        except (urllib.error.URLError, OSError, ValueError) as e:
-            refused.append({"url": u, "reason": f"fetch failed: {e}"})
-            continue
-        res = audit_mod.audit(audit_mod.parse_html(html), html, u, args.insecure)
+        if u in page_html:
+            html, headers = page_html[u]
+        else:
+            try:
+                html, headers = audit_mod.fetch_page(u, insecure=args.insecure)
+            except (urllib.error.URLError, OSError, ValueError) as e:
+                refused.append({"url": u, "reason": f"fetch failed: {e}"})
+                continue
+        res = audit_mod.audit(audit_mod.parse_html(html), html, u, args.insecure, headers,
+                              crawler_check=False, crawler_result=probe)
         pages.append(res)
 
     if not pages:
@@ -357,7 +378,6 @@ def main(argv=None) -> int:
     if not args.quiet:
         print(blob)
     return 0
-
 
 if __name__ == "__main__":
     try:

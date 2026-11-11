@@ -8,7 +8,7 @@ Two skills and two commands:
 
 | Skill | Command | Does |
 |---|---|---|
-| `better-seo` | `/seo-audit <url>` | Measures a page or the whole site: 18 checks, score 0-100, ranked fixes |
+| `better-seo` | `/seo-audit <url>` | Measures a page or the whole site: 20 checks, score 0-100, ranked fixes |
 | `better-seo-build` | `/seo-build` | Configures SEO into a project that has none: robots, sitemap, llms.txt, canonical, meta, JSON-LD |
 | `better-seo-data` | `/seo-data` | Reads Search Console and Core Web Vitals when credentials exist; says so when they do not |
 
