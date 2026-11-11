@@ -1,6 +1,7 @@
-.PHONY: check test install clean
+.PHONY: check test check-live install clean
 
 PY ?= python
+TMPOUT ?= .live-audit.json
 
 check: clean
 	@$(MAKE) --no-print-directory test
@@ -14,6 +15,12 @@ test:
 	@$(PY) tests/test_seo_build.py
 	@$(PY) tests/test_seo_data.py
 	@$(PY) tests/test_install.py
+
+# Uses the network: proves the CLI still works against a live page.
+check-live:
+	@$(PY) skills/better-seo/scripts/audit.py https://example.com --quiet --json $(TMPOUT)
+	@$(PY) tests/check_live_cli.py $(TMPOUT)
+	@rm -f $(TMPOUT)
 
 # Resolve a real bash first: on Windows the `bash` on PATH can be the WSL stub.
 install:

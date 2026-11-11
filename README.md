@@ -275,11 +275,16 @@ repo keeps one source of truth while each installed skill stays self-contained.
 ## Develop
 
 ```bash
-make check    # trigger match + audit behavior + install into a temp root
+make check       # trigger match + audit behavior + install into a temp root
+make check-live  # the same CLI against a real page, over the network
 ```
 
 Tests are fixture-based, offline, stdlib only. `make check` runs `make clean`
 first, so local bytecode can never ride along into an installed skill.
+
+`make check-live` is the one test that needs the network. It asserts the CLI
+still reports the checks the README advertises, so a rename cannot silently
+drop one. Run it before tagging a release.
 
 ## License
 

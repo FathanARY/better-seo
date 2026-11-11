@@ -6,3 +6,4 @@ node_modules/
 audit-result.json
 crawl-result.json
 site-audit.json
+.live-audit.json
