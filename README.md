@@ -20,7 +20,7 @@ CDN bot-fight rule that silently 403s AI crawlers is caught instead of guessed.
 The same content is also re-read with scripts and `<noscript>` excluded, which is
 what a non-JS AI crawler sees.
 
-Three skills and three commands:
+Three skills and three commands ([changelog](CHANGELOG.md)):
 
 | Skill | Command | Does |
 |---|---|---|

@@ -1,7 +1,7 @@
 {
   "name": "better-seo",
   "displayName": "better-seo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Audit, set up and measure a site's SEO: page and site-wide search visibility, agentic-search readiness, missing config, plus Search Console and Core Web Vitals data.",
   "author": {
     "name": "FathanARY"
